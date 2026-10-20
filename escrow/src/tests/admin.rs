@@ -4407,3 +4407,115 @@ fn test_set_storage_limit_nonce_replay_and_event() {
         .to_xdr(&env, &contract_id)
     );
 }
+
+// ---------------------------------------------------------------------------
+// Issue #233: bump_ttl extends all persistent investor keys
+// ---------------------------------------------------------------------------
+
+/// bump_ttl must extend InvestorAllowlisted, InvestorContribution,
+/// InvestorEffectiveYield, InvestorClaimNotBefore, InvestorClaimed, and
+/// InvestorRefunded for each supplied address. It guards each key with `has()`
+/// so absent keys are silently skipped without panicking.
+#[test]
+fn test_bump_ttl_extends_allowlisted_investor_no_panic() {
+    let env = Env::default();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let investor = Address::generate(&env);
+    client.set_investor_allowlisted(&investor, &true);
+
+    // Only InvestorAllowlisted is written; other keys absent — must not panic.
+    client.bump_ttl(&soroban_sdk::vec![&env, investor.clone()]);
+}
+
+/// bump_ttl on a funded investor (InvestorContribution written) must not panic.
+#[test]
+fn test_bump_ttl_extends_contribution_key_after_fund() {
+    let env = Env::default();
+    let sac = install_stellar_asset_token(&env);
+    let (client, admin, sme) = setup(&env);
+    let treasury = Address::generate(&env);
+    client.init(
+        &admin,
+        &soroban_sdk::String::from_str(&env, "INV-BTT"),
+        &sme,
+        &10_000i128,
+        &800i64,
+        &0u64,
+        &sac.id,
+        &None,
+        &treasury,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+
+    let investor = Address::generate(&env);
+    sac.stellar.mint(&investor, &5_000i128);
+    client.fund(&investor, &5_000i128);
+
+    // InvestorContribution is now written; bump_ttl must extend it without panic.
+    client.bump_ttl(&soroban_sdk::vec![&env, investor.clone()]);
+}
+
+/// bump_ttl handles multiple investors in one call without panicking.
+#[test]
+fn test_bump_ttl_multiple_investors_no_panic() {
+    let env = Env::default();
+    let sac = install_stellar_asset_token(&env);
+    let (client, admin, sme) = setup(&env);
+    let treasury = Address::generate(&env);
+    client.init(
+        &admin,
+        &soroban_sdk::String::from_str(&env, "INV-BTTM"),
+        &sme,
+        &10_000i128,
+        &800i64,
+        &0u64,
+        &sac.id,
+        &None,
+        &treasury,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None::<i64>,
+        &None::<u32>,
+    );
+
+    let inv1 = Address::generate(&env);
+    let inv2 = Address::generate(&env);
+    sac.stellar.mint(&inv1, &2_500i128);
+    sac.stellar.mint(&inv2, &2_500i128);
+    client.fund(&inv1, &2_500i128);
+    client.fund(&inv2, &2_500i128);
+
+    // Both investors are now funded; bump_ttl must handle both without panic.
+    client.bump_ttl(&soroban_sdk::vec![&env, inv1.clone(), inv2.clone()]);
+}
+
+/// bump_ttl with an empty vector panics with BumpTtlBatchEmpty.
+#[test]
+fn test_bump_ttl_empty_batch_fails() {
+    let env = Env::default();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    assert_contract_error(
+        client.try_bump_ttl(&soroban_sdk::vec![&env]),
+        EscrowError::BumpTtlBatchEmpty,
+    );
+}
+

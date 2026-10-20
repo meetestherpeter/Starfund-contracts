@@ -1070,6 +1070,12 @@ pub enum EscrowError {
     NothingToWithdraw = 266,
     /// [`StarfundEscrow::cancel_funding`] called while a dispute remains active.
     DisputeBlocksCancelFunding = 267,
+    /// Attestation mutation (`append_attestation_digest`, `revoke_attestation_digest`,
+    /// `revoke_attestation_digests`, `unrevoke_attestation_digest`,
+    /// `unrevoke_attestation_digests`) called while a legal hold is active.
+    LegalHoldBlocksAttestations = 268,
+    /// Attestation mutation called while an operational pause is engaged.
+    PausedBlocksAttestations = 269,
     /// [`StarfundEscrow::partial_settle`] called while `funded_amount == 0`.
     ///
     /// Closing funding early on an escrow with no investor contributions would write a
@@ -4456,6 +4462,13 @@ impl StarfundEscrow {
     /// # Errors
     /// Emits typed [`EscrowError`] codes when the escrow is uninitialized or the append log is full.
     pub fn append_attestation_digest(env: Env, digest: BytesN<32>) {
+        guard_not_legal_hold(&env, EscrowError::LegalHoldBlocksAttestations);
+        guard_not_paused(
+            &env,
+            EscrowError::PausedBlocksAttestations,
+            PauseEntry::Admin,
+        );
+
         let escrow = Self::load_escrow_require_admin(&env);
 
         let mut log: Vec<BytesN<32>> = Self::load_attestation_log(&env);
@@ -4891,6 +4904,13 @@ impl StarfundEscrow {
     }
 
     pub fn revoke_attestation_digest(env: Env, index: u32) {
+        guard_not_legal_hold(&env, EscrowError::LegalHoldBlocksAttestations);
+        guard_not_paused(
+            &env,
+            EscrowError::PausedBlocksAttestations,
+            PauseEntry::Admin,
+        );
+
         let escrow = Self::get_escrow(env.clone());
         escrow.admin.require_auth();
 
@@ -4942,6 +4962,13 @@ impl StarfundEscrow {
     /// One [`AttestationDigestRevoked`] event per newly revoked index, preserving the same event
     /// shape as the single-index entrypoint.
     pub fn revoke_attestation_digests(env: Env, indices: Vec<u32>) {
+        guard_not_legal_hold(&env, EscrowError::LegalHoldBlocksAttestations);
+        guard_not_paused(
+            &env,
+            EscrowError::PausedBlocksAttestations,
+            PauseEntry::Admin,
+        );
+
         let n = indices.len();
 
         ensure(&env, n > 0, EscrowError::AttestationBatchEmpty);
@@ -5096,6 +5123,13 @@ impl StarfundEscrow {
     /// - [`EscrowError::AttestationIndexOutOfRange`] if `index >= log.len()`.
     /// - [`EscrowError::AttestationNotRevoked`] if the index is not currently revoked.
     pub fn unrevoke_attestation_digest(env: Env, index: u32) {
+        guard_not_legal_hold(&env, EscrowError::LegalHoldBlocksAttestations);
+        guard_not_paused(
+            &env,
+            EscrowError::PausedBlocksAttestations,
+            PauseEntry::Admin,
+        );
+
         let log: Vec<BytesN<32>> = env
             .storage()
             .instance()
@@ -5127,6 +5161,87 @@ impl StarfundEscrow {
             index,
         }
         .publish(&env);
+    }
+
+    /// Atomically unrevoke multiple attestation-digest indices in a single call.
+    ///
+    /// Mirrors [`StarfundEscrow::revoke_attestation_digests`] but removes revocation markers
+    /// instead of setting them. Useful for correcting accidental multi-attestation revocations
+    /// without issuing separate sequential transactions.
+    ///
+    /// # Authorization
+    /// Requires `InvoiceEscrow::admin` auth.
+    ///
+    /// # Compliance gates
+    /// Rejects invocations while a legal hold is active ([`EscrowError::LegalHoldBlocksAttestations`])
+    /// or an operational pause is engaged ([`EscrowError::PausedBlocksAttestations`]).
+    ///
+    /// # Batch bounds
+    /// - `indices` must be non-empty (panics with [`EscrowError::AttestationBatchEmpty`]).
+    /// - `indices.len()` must not exceed [`MAX_ATTESTATION_REVOKE_BATCH`] (panics with
+    ///   [`EscrowError::AttestationBatchTooLarge`]).
+    ///
+    /// # Per-index validation (in order)
+    /// - [`EscrowError::AttestationIndexOutOfRange`] if `index >= log.len()`.
+    /// - [`EscrowError::AttestationNotRevoked`] if the entry at `index` is not currently revoked.
+    ///
+    /// # Atomicity
+    /// If **any** per-index validation fails, the entire batch is rolled back (no partial
+    /// unrevocation). Duplicate indices in the batch are **not** pre-deduplicated — the second
+    /// occurrence will fail with [`EscrowError::AttestationNotRevoked`].
+    ///
+    /// # Events
+    /// One [`AttestationDigestUnrevoked`] event per successfully unrevoked index, preserving the
+    /// same event shape as the single-index entrypoint.
+    pub fn unrevoke_attestation_digests(env: Env, indices: Vec<u32>) {
+        guard_not_legal_hold(&env, EscrowError::LegalHoldBlocksAttestations);
+        guard_not_paused(
+            &env,
+            EscrowError::PausedBlocksAttestations,
+            PauseEntry::Admin,
+        );
+
+        let n = indices.len();
+
+        ensure(&env, n > 0, EscrowError::AttestationBatchEmpty);
+        ensure(
+            &env,
+            n <= MAX_ATTESTATION_REVOKE_BATCH,
+            EscrowError::AttestationBatchTooLarge,
+        );
+
+        let escrow = Self::get_escrow(env.clone());
+        escrow.admin.require_auth();
+
+        let log: Vec<BytesN<32>> = env
+            .storage()
+            .instance()
+            .get(&DataKey::AttestationAppendLog)
+            .unwrap_or_else(|| Vec::new(&env));
+
+        for i in 0..n {
+            let index = indices.get(i).unwrap();
+
+            Self::require_attestation_index_in_range(&env, &log, index);
+            ensure(
+                &env,
+                env.storage()
+                    .instance()
+                    .has(&DataKey::AttestationRevoked(index)),
+                EscrowError::AttestationNotRevoked,
+            );
+
+            env.storage()
+                .instance()
+                .remove(&DataKey::AttestationRevoked(index));
+
+            AttestationDigestUnrevoked {
+                name: symbol_short!("att_unrev"),
+                invoice_id: escrow.invoice_id.clone(),
+                index,
+            }
+            .publish(&env);
+        }
     }
 
     pub fn is_investor_claimed(env: Env, investor: Address) -> bool {
@@ -9187,6 +9302,11 @@ impl StarfundEscrow {
 
         escrow.status = 4;
         env.storage().instance().set(&DataKey::Escrow, &escrow);
+
+        // Extend storage TTL so investors have adequate time to submit refund() transactions
+        // before contract storage expires. Mirrors the pattern used in settle(), withdraw(),
+        // partial_settle(), and fund_impl().
+        extend_ttl_for_activity(&env, &escrow, None);
 
         FundingCancelled {
             name: symbol_short!("fund_can"),
