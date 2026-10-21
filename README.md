@@ -446,3 +446,6 @@ MIT
 
 <!-- handsoff-issue-253 -->
 - #253: [Wave 10 #150] rotate_payer Missing Self-Address Guard, Permitting Payer Assignment to Escrow Contract
+
+<!-- handsoff-issue-255 -->
+- #255: [Wave 10 #152] get_pause_state Returns None on Auto-Expired Pause Instead of Distinguishing Inactive vs Expired
