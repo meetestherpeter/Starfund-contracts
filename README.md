@@ -449,3 +449,6 @@ MIT
 
 <!-- handsoff-issue-261 -->
 - #261: [Wave 10 #158] set_pause_max_duration Allows Setting Duration to Zero, Immediately Bricking Any Active Pause
+
+<!-- handsoff-issue-262 -->
+- #262: [Wave 10 #159] Missing Public Read Getter for Historical Dispute Records
