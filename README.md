@@ -446,3 +446,6 @@ MIT
 
 <!-- handsoff-issue-260 -->
 - #260: [Wave 10 #157] PauseScope::Withdrawal Does Not Block StarfundEscrow::release Entrypoint
+
+<!-- handsoff-issue-261 -->
+- #261: [Wave 10 #158] set_pause_max_duration Allows Setting Duration to Zero, Immediately Bricking Any Active Pause
