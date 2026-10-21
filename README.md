@@ -452,3 +452,6 @@ MIT
 
 <!-- handsoff-issue-262 -->
 - #262: [Wave 10 #159] Missing Public Read Getter for Historical Dispute Records
+
+<!-- handsoff-issue-263 -->
+- #263: [Wave 10 #160] clear_legal_hold Fails to Emit LegalHoldClearedEvent
