@@ -443,3 +443,6 @@ MIT
 
 <!-- handsoff-issue-283 -->
 - #283: [Wave 10 #180] get_storage_limit Does Not Validate Key Presence Against Current Schema Version
+
+<!-- handsoff-issue-260 -->
+- #260: [Wave 10 #157] PauseScope::Withdrawal Does Not Block StarfundEscrow::release Entrypoint
