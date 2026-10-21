@@ -443,3 +443,6 @@ MIT
 
 <!-- handsoff-issue-283 -->
 - #283: [Wave 10 #180] get_storage_limit Does Not Validate Key Presence Against Current Schema Version
+
+<!-- handsoff-issue-275 -->
+- #275: [Wave 10 #172] bump_ttl Only Extends Persistent Storage Keys, Leaving Instance Storage at Risk of Expiration
