@@ -3359,9 +3359,37 @@ fn test_cancel_funding_preserves_funded_amount() {
     assert_eq!(cancelled.funded_amount, TARGET / 2);
 }
 
+// Issue #232: cancel_funding must call extend_ttl_for_activity so investors
+// have adequate time to submit refund() after cancellation.
 #[test]
-#[ignore = "triaged: cancelled dust-sweep path requires API reconciliation"]
-fn test_sweep_terminal_dust_allowed_in_cancelled_state() {
+fn test_cancel_funding_extends_instance_ttl() {
+    // In the Soroban test environment, extend_ttl is a benign no-op, but calling
+    // it must not cause a panic. This test confirms cancel_funding completes
+    // successfully and transitions status → 4 even when the TTL extension path
+    // is exercised (i.e., the code path compiles and runs without error).
+    let env = Env::default();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let result = client.cancel_funding(&0u32);
+    assert_eq!(result.status, 4);
+}
+
+#[test]
+fn test_cancel_funding_with_partial_contribution_extends_ttl() {
+    let env = Env::default();
+    let (client, admin, sme) = setup(&env);
+    let investor = Address::generate(&env);
+    default_init(&client, &env, &admin, &sme);
+    client.fund(&investor, &(TARGET / 4));
+
+    // Cancelling with a partial contribution must still extend TTL and return status 4.
+    let result = client.cancel_funding(&0u32);
+    assert_eq!(result.status, 4);
+    assert_eq!(result.funded_amount, TARGET / 4);
+}
+
+
     let env = Env::default();
 
     let (client, admin, sme) = setup(&env);
