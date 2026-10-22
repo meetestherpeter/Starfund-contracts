@@ -3,7 +3,8 @@ use crate::{
     AdminAcceptedEvent, AdminProposalCancelled, AdminProposalSuperseded, AdminProposedEvent,
     DeprecatedTransferAdminUsed, EscrowCloseSnapshot, FundingStateChanged, FundingTargetUpdated,
     MaturityMaxHorizonRaised, PayerRotated, ProtocolFeeUpdated, RegistryRefRebound,
-    DEFAULT_MATURITY_MAX_HORIZON_SECS, MAX_INVOICE_AMOUNT,
+    DEFAULT_MATURITY_MAX_HORIZON_SECS, MAX_ADMIN_PROPOSAL_VALIDITY_SECS,
+    MAX_INVOICE_AMOUNT, MIN_ADMIN_PROPOSAL_VALIDITY_SECS,
 };
 
 use soroban_sdk::Event;
@@ -35,10 +36,10 @@ fn test_update_maturity_emits_event() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.update_maturity(&2000u64, &0u32);
+    let all_events = env.events().all();
     assert_eq!(
         all_events.events().last().unwrap().clone(),
         crate::MaturityUpdatedEvent {
@@ -74,9 +75,8 @@ fn test_update_maturity_unchanged_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.update_maturity(&2000u64, &0u32);
 }
 
@@ -102,9 +102,8 @@ fn test_update_maturity_success() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let updated = client.update_maturity(&2000u64, &0u32);
     assert_eq!(updated.maturity, 2000u64);
     assert_eq!(updated.status, 0);
@@ -134,9 +133,8 @@ fn test_update_maturity_wrong_state() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &1_000i128);
     client.update_maturity(&2000u64, &0u32);
 }
@@ -167,9 +165,8 @@ fn test_update_maturity_unauthorized() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     env.mock_auths(&[]);
     client.update_maturity(&2000u64, &0u32);
 }
@@ -198,9 +195,8 @@ fn test_set_protocol_fee_bps_updates_storage_and_emits_event() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let updated = client.set_protocol_fee_bps(&2500i64);
     assert_eq!(updated, 2500i64);
@@ -243,9 +239,8 @@ fn test_set_protocol_fee_bps_rejects_out_of_range_values() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_contract_error(
         client.try_set_protocol_fee_bps(&10001i64),
@@ -281,9 +276,8 @@ fn test_set_protocol_fee_bps_requires_admin_auth() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     env.mock_auths(&[]);
     client.set_protocol_fee_bps(&1500i64);
@@ -312,9 +306,8 @@ fn test_propose_admin_sets_pending_without_changing_admin() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let pending = client.propose_admin(&new_admin, &0u32, &None);
     assert_eq!(pending, new_admin);
     assert_eq!(client.get_pending_admin(), Some(new_admin));
@@ -344,9 +337,8 @@ fn test_accept_admin_promotes_pending_and_clears_pending() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.propose_admin(&new_admin, &0u32, &None);
     let updated = client.accept_admin();
@@ -379,9 +371,8 @@ fn test_transfer_admin_deprecated_shim_only_proposes() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let unchanged = client.transfer_admin(&new_admin, &0u32);
     assert_eq!(unchanged.admin, admin);
@@ -615,9 +606,8 @@ fn test_transfer_admin_same_address_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.propose_admin(&admin, &0u32, &None);
 }
 
@@ -1329,9 +1319,8 @@ fn test_read_model_summary_includes_optional_admin_fields() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let summary = client.get_escrow_summary();
 
@@ -1367,9 +1356,8 @@ fn test_record_collateral_stored_and_does_not_block_settle() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let c = client.record_sme_collateral_commitment(&symbol_short!("USDC"), &5000i128);
     assert_eq!(c.amount, 5000i128);
     assert_eq!(c.asset, symbol_short!("USDC"));
@@ -1500,9 +1488,8 @@ fn test_collateral_zero_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.record_sme_collateral_commitment(&symbol_short!("XLM"), &0i128);
 }
 
@@ -1529,9 +1516,8 @@ fn test_collateral_requires_sme_auth() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     env.mock_auths(&[]);
     client.record_sme_collateral_commitment(&symbol_short!("XLM"), &100i128);
 }
@@ -1559,9 +1545,8 @@ fn test_legal_hold_blocks_settle_withdraw_claim_and_fund() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &TARGET);
     client.set_legal_hold(&true, &0u32);
     assert!(client.get_legal_hold());
@@ -1616,9 +1601,8 @@ fn test_legal_hold_blocks_new_funds_when_open() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.set_legal_hold(&true, &0u32);
     client.fund(&investor, &1i128);
 }
@@ -1662,9 +1646,8 @@ fn test_update_funding_target_by_admin_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let updated = client.update_funding_target(&10_000i128, &0u32);
     assert_eq!(updated.funding_target, 10_000i128);
@@ -1699,9 +1682,8 @@ fn test_update_funding_target_by_non_admin_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     env.mock_auths(&[]);
     client.update_funding_target(&10_000i128, &0u32);
@@ -1737,9 +1719,8 @@ fn test_update_funding_target_fails_when_funded() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &5_000i128);
     client.update_funding_target(&10_000i128, &0u32);
 }
@@ -1774,9 +1755,8 @@ fn test_update_funding_target_below_funded_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &4_000i128);
     client.update_funding_target(&3_000i128, &0u32);
 }
@@ -1810,9 +1790,8 @@ fn test_update_funding_target_zero_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.update_funding_target(&0i128, &0u32);
 }
 
@@ -1852,9 +1831,8 @@ fn test_update_funding_target_event_fields() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.update_funding_target(&9_000i128, &0u32);
 
@@ -1902,9 +1880,8 @@ fn test_update_funding_target_fails_when_settled() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &5_000i128); // status ├ö├Ñ├å 1 (funded)
     client.settle(); // status ├ö├Ñ├å 2 (settled)
     client.update_funding_target(&6_000i128, &0u32);
@@ -1954,9 +1931,8 @@ fn test_update_funding_target_equal_to_funded_amount_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &4_000i128); // funded_amount == 4_000, status still 0
 
     // new_target == funded_amount: boundary ├ö├ç├Â must not panic.
@@ -2031,9 +2007,8 @@ fn test_update_funding_target_promotion_emits_funding_state_changed() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let investor = Address::generate(&env);
     sac.stellar.mint(&investor, &4_000i128);
     client.fund(&investor, &4_000i128);
@@ -2095,9 +2070,8 @@ fn test_update_funding_target_raise_does_not_emit_funding_state_changed() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let investor = Address::generate(&env);
     sac.stellar.mint(&investor, &4_000i128);
     client.fund(&investor, &4_000i128);
@@ -2153,9 +2127,8 @@ fn test_update_funding_target_negative_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.update_funding_target(&-1i128, &0u32);
 }
 // --- update_maturity: open-only, ledger time semantics, MaturityUpdatedEvent ---
@@ -2196,9 +2169,8 @@ fn test_update_maturity_event_fields() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.update_maturity(&2000u64, &0u32);
 
@@ -2246,9 +2218,8 @@ fn test_update_maturity_fails_when_funded() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &5_000i128); // status ├ö├Ñ├å 1 (funded)
     client.update_maturity(&2000u64, &0u32);
 }
@@ -2285,9 +2256,8 @@ fn test_update_maturity_fails_when_settled() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &5_000i128); // status ├ö├Ñ├å 1
     client.settle(); // status ├ö├Ñ├å 2
     client.update_maturity(&2000u64, &0u32);
@@ -2335,9 +2305,8 @@ fn test_update_maturity_to_zero_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let updated = client.update_maturity(&0u64, &0u32);
     assert_eq!(updated.maturity, 0u64);
     assert_eq!(updated.status, 0);
@@ -2375,9 +2344,8 @@ fn test_settle_passes_exactly_at_maturity_ledger_time() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &5_000i128);
 
     // Advance ledger to exactly maturity — must succeed
@@ -2418,9 +2386,8 @@ fn test_settle_fails_one_second_before_maturity() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &5_000i128);
 
     // One second before maturity — must reject
@@ -2458,9 +2425,8 @@ fn test_update_maturity_twice_overwrites() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.update_maturity(&2000u64, &0u32);
     let updated = client.update_maturity(&3000u64, &1u32);
@@ -2530,9 +2496,8 @@ fn test_update_maturity_rejects_at_or_before_funding_deadline() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Attempting update_maturity to 900 (< 1000) must fail with FundingDeadlineAtOrAfterMaturity
     assert_contract_error(
@@ -2546,9 +2511,19 @@ fn test_update_maturity_rejects_at_or_before_funding_deadline() {
         EscrowError::FundingDeadlineAtOrAfterMaturity,
     );
 
-    // Attempting update_maturity to 1500 (> 1000) must succeed
-    let updated = client.update_maturity(&1500u64, &0u32);
-    assert_eq!(updated.maturity, 1500u64);
+    // A maturity less than 30 days after the deadline is rejected.
+    assert_contract_error(
+        client.try_update_maturity(
+            &(1000u64 + MIN_MATURITY_AFTER_FUNDING_DEADLINE_SECS - 1),
+            &0u32,
+        ),
+        EscrowError::MaturityTooCloseToFundingDeadline,
+    );
+
+    // Exactly 30 days after the deadline is accepted.
+    let valid_maturity = 1000u64 + MIN_MATURITY_AFTER_FUNDING_DEADLINE_SECS;
+    let updated = client.update_maturity(&valid_maturity, &0u32);
+    assert_eq!(updated.maturity, valid_maturity);
 }
 
 /// Issue #108: update_maturity consumes an admin nonce and rejects mismatches / replays.
@@ -2577,9 +2552,8 @@ fn test_update_maturity_nonce_replay_protection() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_admin_nonce(), 0u32);
 
@@ -2749,7 +2723,7 @@ fn auth_audit_fund_batch_requires_payer() {
 }
 
 #[test]
-fn rotate_payer_requires_dual_auth_and_emits_event() {
+fn rotate_payer_requires_three_party_auth_and_emits_event() {
     use soroban_sdk::testutils::Events as _;
 
     let env = Env::default();
@@ -2758,14 +2732,26 @@ fn rotate_payer_requires_dual_auth_and_emits_event() {
     default_init(&client, &env, &admin, &sme);
 
     let first_payer = Address::generate(&env);
-    client.rotate_payer(&first_payer);
+    client.rotate_payer(&first_payer, &0u32);
 
     let new_payer = Address::generate(&env);
-    let args = soroban_sdk::Vec::from_array(&env, [new_payer.clone().into_val(&env)]);
+    let args = soroban_sdk::Vec::from_array(
+        &env,
+        [new_payer.clone().into_val(&env), 1u32.into_val(&env)],
+    );
     let events_before = env.events().all().events().len();
     env.mock_auths(&[
         soroban_sdk::testutils::MockAuth {
             address: &first_payer,
+            invoke: &soroban_sdk::testutils::MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "rotate_payer",
+                args: args.clone(),
+                sub_invokes: &[],
+            },
+        },
+        soroban_sdk::testutils::MockAuth {
+            address: &new_payer,
             invoke: &soroban_sdk::testutils::MockAuthInvoke {
                 contract: &client.address,
                 fn_name: "rotate_payer",
@@ -2784,7 +2770,7 @@ fn rotate_payer_requires_dual_auth_and_emits_event() {
         },
     ]);
 
-    let rotated = client.rotate_payer(&new_payer);
+    let rotated = client.rotate_payer(&new_payer, &1u32);
 
     assert_eq!(rotated.payer, new_payer);
     let events = env.events().all().events();
@@ -2801,26 +2787,40 @@ fn rotate_payer_requires_dual_auth_and_emits_event() {
 
 #[test]
 #[should_panic]
-fn rotate_payer_rejects_admin_only_auth() {
+fn rotate_payer_rejects_missing_new_payer_auth() {
     let env = Env::default();
     env.mock_all_auths();
     let (client, admin, sme) = setup(&env);
     default_init(&client, &env, &admin, &sme);
 
     let current_payer = Address::generate(&env);
-    client.rotate_payer(&current_payer);
+    client.rotate_payer(&current_payer, &0u32);
     let new_payer = Address::generate(&env);
-    let args = soroban_sdk::Vec::from_array(&env, [new_payer.clone().into_val(&env)]);
-    env.mock_auths(&[soroban_sdk::testutils::MockAuth {
-        address: &admin,
-        invoke: &soroban_sdk::testutils::MockAuthInvoke {
-            contract: &client.address,
-            fn_name: "rotate_payer",
-            args,
-            sub_invokes: &[],
+    let args = soroban_sdk::Vec::from_array(
+        &env,
+        [new_payer.clone().into_val(&env), 1u32.into_val(&env)],
+    );
+    env.mock_auths(&[
+        soroban_sdk::testutils::MockAuth {
+            address: &current_payer,
+            invoke: &soroban_sdk::testutils::MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "rotate_payer",
+                args: args.clone(),
+                sub_invokes: &[],
+            },
         },
-    }]);
-    client.rotate_payer(&new_payer);
+        soroban_sdk::testutils::MockAuth {
+            address: &admin,
+            invoke: &soroban_sdk::testutils::MockAuthInvoke {
+                contract: &client.address,
+                fn_name: "rotate_payer",
+                args,
+                sub_invokes: &[],
+            },
+        },
+    ]);
+    client.rotate_payer(&new_payer, &1u32);
 }
 
 #[test]
@@ -2832,9 +2832,12 @@ fn rotate_payer_rejects_payer_only_auth() {
     default_init(&client, &env, &admin, &sme);
 
     let current_payer = Address::generate(&env);
-    client.rotate_payer(&current_payer);
+    client.rotate_payer(&current_payer, &0u32);
     let new_payer = Address::generate(&env);
-    let args = soroban_sdk::Vec::from_array(&env, [new_payer.clone().into_val(&env)]);
+    let args = soroban_sdk::Vec::from_array(
+        &env,
+        [new_payer.clone().into_val(&env), 1u32.into_val(&env)],
+    );
     env.mock_auths(&[soroban_sdk::testutils::MockAuth {
         address: &current_payer,
         invoke: &soroban_sdk::testutils::MockAuthInvoke {
@@ -2844,7 +2847,34 @@ fn rotate_payer_rejects_payer_only_auth() {
             sub_invokes: &[],
         },
     }]);
-    client.rotate_payer(&new_payer);
+    client.rotate_payer(&new_payer, &1u32);
+}
+
+#[test]
+#[should_panic]
+fn rotate_payer_rejects_admin_only_auth() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let current_payer = Address::generate(&env);
+    client.rotate_payer(&current_payer, &0u32);
+    let new_payer = Address::generate(&env);
+    let args = soroban_sdk::Vec::from_array(
+        &env,
+        [new_payer.clone().into_val(&env), 1u32.into_val(&env)],
+    );
+    env.mock_auths(&[soroban_sdk::testutils::MockAuth {
+        address: &admin,
+        invoke: &soroban_sdk::testutils::MockAuthInvoke {
+            contract: &client.address,
+            fn_name: "rotate_payer",
+            args,
+            sub_invokes: &[],
+        },
+    }]);
+    client.rotate_payer(&new_payer, &1u32);
 }
 
 #[test]
@@ -2855,7 +2885,7 @@ fn rotate_payer_rejects_same_payer() {
     default_init(&client, &env, &admin, &sme);
 
     assert_contract_error(
-        client.try_rotate_payer(&admin),
+        client.try_rotate_payer(&admin, &0u32),
         EscrowError::NewPayerSameAsCurrent,
     );
 }
@@ -2867,7 +2897,7 @@ fn rotate_payer_rejects_terminal_escrow() {
     let new_payer = Address::generate(&env);
 
     assert_contract_error(
-        client.try_rotate_payer(&new_payer),
+        client.try_rotate_payer(&new_payer, &0u32),
         EscrowError::PayerRotationNotOpen,
     );
 }
@@ -2882,7 +2912,7 @@ fn rotate_payer_rejects_active_legal_hold() {
     let new_payer = Address::generate(&env);
 
     assert_contract_error(
-        client.try_rotate_payer(&new_payer),
+        client.try_rotate_payer(&new_payer, &0u32),
         EscrowError::LegalHoldBlocksPayerRotation,
     );
 }
@@ -2989,9 +3019,8 @@ fn auth_audit_sweep_terminal_dust_requires_treasury() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &TARGET);
     client.settle();
     token.stellar.mint(&escrow_id, &100i128);
@@ -3266,6 +3295,7 @@ fn test_rotate_beneficiary_success_dual_auth() {
     assert_eq!(updated.sme_address, new_sme);
     assert_eq!(client.get_escrow().sme_address, new_sme);
 
+    let rotate_events = env.events().all();
     let all_evts = rotate_events.events();
     let total_evts = all_evts.len();
     assert!(total_evts >= 2);
@@ -3457,9 +3487,8 @@ fn test_rotate_beneficiary_then_withdraw_goes_to_new_sme() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     token.stellar.mint(&investor, &TARGET);
     token
         .stellar
@@ -3500,9 +3529,8 @@ fn test_rotate_beneficiary_partial_funding_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.fund(&investor, &TARGET); // partial funding
     client.rotate_beneficiary(&new_sme);
 }
@@ -3516,7 +3544,7 @@ fn test_rebind_registry_ref_before_and_after_funding() {
     default_init(&client, &env, &admin, &sme);
 
     // Before funding, admin may rebind the registry.
-    client.rebind_registry_ref(&Some(registry.clone()));
+    client.rebind_registry_ref(&Some(registry.clone()), &0u32);
     assert_eq!(client.get_registry_ref(), Some(registry.clone()));
 
     // After funding, rebind should be rejected.
@@ -3524,7 +3552,7 @@ fn test_rebind_registry_ref_before_and_after_funding() {
     client.fund(&investor, &TARGET);
     let new_registry = Address::generate(&env);
     let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        client.rebind_registry_ref(&Some(new_registry))
+        client.rebind_registry_ref(&Some(new_registry), &1u32)
     }));
     assert!(res.is_err());
 }
@@ -3680,29 +3708,36 @@ fn test_rebind_registry_ref_sets_and_clears() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let invoice_id = client.get_escrow().invoice_id.clone();
 
+    assert_eq!(client.get_admin_nonce(), 0);
+    assert_contract_error(
+        client.try_rebind_registry_ref(&Some(reg1.clone()), &1u32),
+        EscrowError::AdminNonceMismatch,
+    );
+    assert_eq!(client.get_admin_nonce(), 0);
+
     // Set to reg1
-    client.rebind_registry_ref(&Some(reg1.clone()));
+    client.rebind_registry_ref(&Some(reg1.clone()), &0u32);
+    assert_eq!(client.get_admin_nonce(), 1);
     assert_eq!(client.get_registry_ref(), Some(reg1.clone()));
 
     // Change to reg2
-    client.rebind_registry_ref(&Some(reg2.clone()));
+    client.rebind_registry_ref(&Some(reg2.clone()), &1u32);
     assert_eq!(client.get_registry_ref(), Some(reg2.clone()));
 
     // Clear to None
-    client.rebind_registry_ref(&None);
+    client.rebind_registry_ref(&None, &2u32);
     let clear_events = env.events().all();
     assert_eq!(client.get_registry_ref(), None);
 
     // Event sanity: last event should be clear (registry == None)
     let last = clear_events.events().last().unwrap().clone();
     let expected = crate::RegistryRefRebound {
-        name: Symbol::new(&env, "reg_rebind"),
+        name: symbol_short!("reg_rebd"),
         invoice_id: invoice_id.clone(),
         registry: None,
     }
@@ -3711,18 +3746,19 @@ fn test_rebind_registry_ref_sets_and_clears() {
     assert_eq!(last, expected);
 
     // Set to reg1 again to test clear_registry_ref
-    client.rebind_registry_ref(&Some(reg1.clone()));
+    client.rebind_registry_ref(&Some(reg1.clone()), &3u32);
     assert_eq!(client.get_registry_ref(), Some(reg1.clone()));
 
     // Clear using clear_registry_ref
-    client.clear_registry_ref();
+    client.clear_registry_ref(&4u32);
     let clear2_events = env.events().all();
     assert_eq!(client.get_registry_ref(), None);
+    assert_eq!(client.get_admin_nonce(), 5);
 
     // Event sanity: last event should be clear (registry == None) from clear_registry_ref
     let last = clear2_events.events().last().unwrap().clone();
     let expected = crate::RegistryRefRebound {
-        name: Symbol::new(&env, "reg_rebind"),
+        name: symbol_short!("reg_rebd"),
         invoice_id,
         registry: None,
     }
@@ -3755,12 +3791,11 @@ fn test_rebind_registry_ref_requires_admin_auth() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     env.mock_auths(&[]);
-    client.rebind_registry_ref(&Some(Address::generate(&env)));
+    client.rebind_registry_ref(&Some(Address::generate(&env)), &0u32);
 }
 
 /// Doc-backing test: rebinding or clearing the registry-reference pointer must not affect
@@ -3803,9 +3838,8 @@ fn test_registry_ref_does_not_affect_settlement_or_funding() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Confirm no registry at init.
     assert_eq!(client.get_registry_ref(), None);
@@ -3816,7 +3850,7 @@ fn test_registry_ref_does_not_affect_settlement_or_funding() {
     let funded_before = client.get_escrow().funded_amount;
 
     // Bind a registry reference — funded_amount must be unchanged.
-    client.rebind_registry_ref(&Some(registry.clone()));
+    client.rebind_registry_ref(&Some(registry.clone()), &0u32);
     assert_eq!(client.get_registry_ref(), Some(registry.clone()));
     assert_eq!(
         client.get_escrow().funded_amount,
@@ -3826,7 +3860,7 @@ fn test_registry_ref_does_not_affect_settlement_or_funding() {
 
     // Change to a different registry — still no fund change.
     let registry2 = Address::generate(&env);
-    client.rebind_registry_ref(&Some(registry2.clone()));
+    client.rebind_registry_ref(&Some(registry2.clone()), &1u32);
     assert_eq!(client.get_registry_ref(), Some(registry2.clone()));
     assert_eq!(
         client.get_escrow().funded_amount,
@@ -3835,7 +3869,7 @@ fn test_registry_ref_does_not_affect_settlement_or_funding() {
     );
 
     // Clear via rebind_registry_ref(None) — still fully funded.
-    client.rebind_registry_ref(&None);
+    client.rebind_registry_ref(&None, &2u32);
     assert_eq!(client.get_registry_ref(), None);
     assert_eq!(
         client.get_escrow().funded_amount,
@@ -3844,8 +3878,8 @@ fn test_registry_ref_does_not_affect_settlement_or_funding() {
     );
 
     // Rebind once more then clear via clear_registry_ref — funded_amount unchanged.
-    client.rebind_registry_ref(&Some(registry.clone()));
-    client.clear_registry_ref();
+    client.rebind_registry_ref(&Some(registry.clone()), &3u32);
+    client.clear_registry_ref(&4u32);
     assert_eq!(client.get_registry_ref(), None);
     assert_eq!(
         client.get_escrow().funded_amount,
@@ -3859,14 +3893,14 @@ fn test_registry_ref_does_not_affect_settlement_or_funding() {
     let invoice_id = client.get_escrow().invoice_id.clone();
     let last = all_events.events().last().unwrap().clone();
     let expected_clear = crate::RegistryRefRebound {
-        name: Symbol::new(&env, "reg_rebind"),
+        name: symbol_short!("reg_rebd"),
         invoice_id,
         registry: None,
     }
     .to_xdr(&env, &contract_id);
     assert_eq!(
         last, expected_clear,
-        "last event must be reg_rebind with None"
+        "last event must be reg_rebd with None"
     );
 }
 
@@ -4003,9 +4037,8 @@ fn test_update_maturity_max_horizon_unauthorized() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     env.mock_auths(&[]);
     client.update_maturity_max_horizon(&3_600u64);
 }
@@ -4037,9 +4070,8 @@ fn test_update_maturity_max_horizon_emits_event() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let new_horizon = 3_600u64;
     client.update_maturity_max_horizon(&new_horizon);
@@ -4097,9 +4129,8 @@ fn test_update_horizon_cannot_invalidate_existing_maturity() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_escrow().maturity, 2_000u64);
 
@@ -4147,9 +4178,8 @@ fn test_lowered_horizon_allows_within_horizon_maturity_update() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Lower the horizon to 2 hours.
     client.update_maturity_max_horizon(&7_200u64);
@@ -4179,7 +4209,7 @@ fn test_post_handover_admin_can_clear_hold_set_by_old_admin() {
     default_init(&client, &env, &old_admin, &sme);
 
     // 1. Old admin sets a legal hold
-    client.set_legal_hold(&true);
+    client.set_legal_hold(&true, &0u32);
     assert!(client.get_legal_hold());
 
     // 2. Old admin proposes new admin
@@ -4236,7 +4266,7 @@ fn test_partial_settle_legal_hold_typed_error() {
     let (client, admin, sme) = setup(&env);
     default_init(&client, &env, &admin, &sme);
 
-    client.set_legal_hold(&true);
+    client.set_legal_hold(&true, &0u32);
 
     assert_contract_error(
         client.try_partial_settle(&sme),
@@ -4304,9 +4334,8 @@ fn test_raise_maturity_max_horizon_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let default_horizon = DEFAULT_MATURITY_MAX_HORIZON_SECS;
     assert_eq!(client.get_maturity_max_horizon(), default_horizon);
@@ -4340,9 +4369,8 @@ fn test_raise_maturity_max_horizon_not_raised_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let default_horizon = DEFAULT_MATURITY_MAX_HORIZON_SECS;
     assert_contract_error(
@@ -4376,9 +4404,8 @@ fn test_raise_maturity_max_horizon_emits_event() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let old_horizon = DEFAULT_MATURITY_MAX_HORIZON_SECS;
     let new_horizon = old_horizon + 7_200;
@@ -4539,4 +4566,127 @@ fn test_set_storage_limit_nonce_replay_and_event() {
         }
         .to_xdr(&env, &contract_id)
     );
+}
+
+// ── Issue #239: propose_admin validity-window bounds ─────────────────────────
+//
+// propose_admin must reject custom validity windows that exceed
+// MAX_ADMIN_PROPOSAL_VALIDITY_SECS (30 days) or fall below
+// MIN_ADMIN_PROPOSAL_VALIDITY_SECS (1 hour).
+
+/// A custom validity window exceeding MAX_ADMIN_PROPOSAL_VALIDITY_SECS must
+/// revert with [`EscrowError::AdminProposalValidityTooLong`].
+#[test]
+fn test_propose_admin_validity_window_too_long_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let new_admin = Address::generate(&env);
+    let too_long = MAX_ADMIN_PROPOSAL_VALIDITY_SECS + 1;
+
+    assert_contract_error(
+        client.try_propose_admin(&new_admin, &0u32, &Some(too_long)),
+        EscrowError::AdminProposalValidityTooLong,
+    );
+    // No pending admin must have been set.
+    assert!(client.get_pending_admin().is_none());
+}
+
+/// A custom validity window at exactly MAX_ADMIN_PROPOSAL_VALIDITY_SECS must succeed.
+#[test]
+fn test_propose_admin_validity_window_at_max_boundary_succeeds() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let new_admin = Address::generate(&env);
+    let at_max = MAX_ADMIN_PROPOSAL_VALIDITY_SECS;
+
+    client.propose_admin(&new_admin, &0u32, &Some(at_max));
+    assert_eq!(client.get_pending_admin(), Some(new_admin));
+    assert_eq!(
+        client.get_pending_admin_expiry(),
+        Some(at_max),  // timestamp starts at 0 in tests
+    );
+}
+
+/// A custom validity window below MIN_ADMIN_PROPOSAL_VALIDITY_SECS must
+/// revert with [`EscrowError::AdminProposalValidityTooShort`].
+#[test]
+fn test_propose_admin_validity_window_too_short_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let new_admin = Address::generate(&env);
+    let too_short = MIN_ADMIN_PROPOSAL_VALIDITY_SECS - 1;
+
+    assert_contract_error(
+        client.try_propose_admin(&new_admin, &0u32, &Some(too_short)),
+        EscrowError::AdminProposalValidityTooShort,
+    );
+    assert!(client.get_pending_admin().is_none());
+}
+
+/// A custom validity window at exactly MIN_ADMIN_PROPOSAL_VALIDITY_SECS must succeed.
+#[test]
+fn test_propose_admin_validity_window_at_min_boundary_succeeds() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let new_admin = Address::generate(&env);
+    let at_min = MIN_ADMIN_PROPOSAL_VALIDITY_SECS;
+
+    client.propose_admin(&new_admin, &0u32, &Some(at_min));
+    assert_eq!(client.get_pending_admin(), Some(new_admin));
+}
+
+/// The default window (None) must succeed and falls within [MIN, MAX].
+#[test]
+fn test_propose_admin_default_window_within_bounds_succeeds() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    let new_admin = Address::generate(&env);
+    client.propose_admin(&new_admin, &0u32, &None);
+    assert!(client.get_pending_admin().is_some());
+}
+
+/// recover_admin is guaranteed to become executable once the bounded validity
+/// window has elapsed. The cap ensures expiry is always reachable.
+#[test]
+fn test_recover_admin_reachable_after_bounded_window_expires() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let (client, admin, sme) = setup(&env);
+    default_init(&client, &env, &admin, &sme);
+
+    env.ledger().set_timestamp(1_000);
+    let new_admin = Address::generate(&env);
+    // Use the maximum allowed window.
+    client.propose_admin(&new_admin, &0u32, &Some(MAX_ADMIN_PROPOSAL_VALIDITY_SECS));
+
+    let expiry = client.get_pending_admin_expiry().expect("expiry set");
+    assert_eq!(expiry, 1_000 + MAX_ADMIN_PROPOSAL_VALIDITY_SECS);
+
+    // Before expiry — recover_admin must fail.
+    env.ledger().set_timestamp(expiry);
+    assert_contract_error(
+        client.try_recover_admin(&soroban_sdk::String::from_str(&env, "not yet")),
+        EscrowError::AdminRecoveryNotExpired,
+    );
+
+    // After expiry — recover_admin must succeed.
+    env.ledger().set_timestamp(expiry + 1);
+    let recovered = client.recover_admin(&soroban_sdk::String::from_str(&env, "recovery"));
+    assert_eq!(recovered, admin);
+    assert!(client.get_pending_admin().is_none());
 }

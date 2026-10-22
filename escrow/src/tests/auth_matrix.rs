@@ -52,9 +52,8 @@ fn setup_inited(
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     (client, admin, sme, treasury, token)
 }
 
@@ -130,9 +129,8 @@ fn setup_funded(
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let investor = Address::generate(env);
     client.fund(&investor, &100_000_000_000i128);
     (client, admin, sme, investor, treasury)

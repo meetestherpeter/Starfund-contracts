@@ -48,9 +48,8 @@ fn init_escrow<'a>(env: &'a Env) -> Fixture<'a> {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Give the escrow the balance it will disburse, so `release`/`withdraw` can transfer.
     sac_admin.mint(&contract, &TARGET);
@@ -316,9 +315,8 @@ fn open_floor_escrow(env: &Env, initial_floor: i128) -> (crate::StarfundEscrowCl
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     (client, admin)
 }
 

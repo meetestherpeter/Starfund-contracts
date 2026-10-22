@@ -4,6 +4,82 @@ use std::collections::BTreeSet;
 
 proptest! {
     #[test]
+    fn prop_interleaved_fund_unfund_preserves_accounting(
+        actions in proptest::collection::vec(
+            (any::<bool>(), 0usize..6, 1i128..=100_000i128),
+            1usize..=20,
+        ),
+    ) {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let sme = Address::generate(&env);
+        let treasury = Address::generate(&env);
+        let token = install_stellar_asset_token(&env);
+        let (contract_id, client) = deploy_with_id(&env);
+        let investors: Vec<Address> = (0..6).map(|_| Address::generate(&env)).collect();
+        let initial_balance = 2_000_000i128;
+
+        client.init(
+            &admin,
+            &soroban_sdk::String::from_str(&env, "FUNDUNFUND"),
+            &sme,
+            &3_000_000i128,
+            &0i64,
+            &0u64,
+            &token.id,
+            &None,
+            &treasury,
+            &None,
+            &None,
+            &None,
+            &None,
+            &None,
+            &None,
+            &None,
+            &None,
+            &None::<i64>,
+            &None::<u32>,
+        );
+
+        for investor in &investors {
+            token.stellar.mint(investor, &initial_balance);
+        }
+
+        let mut contributions = vec![0i128; investors.len()];
+
+        for (is_fund, investor_ix, amount) in actions {
+            let investor_ix = investor_ix % investors.len();
+            let investor = &investors[investor_ix];
+
+            if is_fund {
+                client.fund(investor, &amount);
+                contributions[investor_ix] += amount;
+            } else {
+                let unfund_amount = amount.min(contributions[investor_ix]);
+                if unfund_amount > 0 {
+                    client.unfund(investor, &unfund_amount);
+                    contributions[investor_ix] -= unfund_amount;
+                }
+            }
+
+            let expected_funded: i128 = contributions.iter().sum();
+            let expected_unique_funders = contributions
+                .iter()
+                .filter(|&&value| value > 0)
+                .count() as u32;
+
+            prop_assert_eq!(client.get_escrow().funded_amount, expected_funded);
+            prop_assert_eq!(client.get_unique_funder_count(), expected_unique_funders);
+            prop_assert_eq!(token.token.balance(&contract_id), expected_funded);
+            for (ix, expected_contribution) in contributions.iter().enumerate() {
+                prop_assert_eq!(client.get_contribution(&investors[ix]), *expected_contribution);
+            }
+        }
+    }
+
+    #[test]
     fn prop_funded_amount_non_decreasing(
         amount1 in 1i128..50_000_000_000i128,
         amount2 in 1i128..50_000_000_000i128,
@@ -385,9 +461,8 @@ fn prop_status_transitions_open_to_funded_only() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let initial = client.get_escrow();
     assert_eq!(initial.status, 0, "status must start at 0");
@@ -428,9 +503,8 @@ fn prop_status_settle_transition() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&investor, &target);
 
@@ -470,9 +544,8 @@ fn prop_status_withdraw_transition() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     token.stellar.mint(&investor, &target);
     client.fund(&investor, &target);
@@ -516,9 +589,8 @@ fn prop_no_regression_from_funded_status() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&investor, &target);
 
@@ -566,9 +638,8 @@ fn prop_no_regression_after_withdraw() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     token.stellar.mint(&investor, &target);
     client.fund(&investor, &target);
@@ -608,9 +679,8 @@ fn prop_settled_is_terminal_for_settle() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&investor, &target);
     client.settle();
@@ -648,9 +718,8 @@ fn prop_withdrawn_is_terminal_for_withdraw() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     token.stellar.mint(&investor, &target);
     client.fund(&investor, &target);
@@ -688,9 +757,8 @@ fn prop_status_invariant_all_states_valid_range() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert!(client.get_escrow().status == 0);
 
@@ -733,9 +801,8 @@ fn prop_funded_amount_sum_of_contributions() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let inv1 = Address::generate(&env);
     let inv2 = Address::generate(&env);
@@ -788,9 +855,8 @@ fn prop_funded_amount_respects_funding_target() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let fund_amount = target + excess;
     let after = client.fund(&investor, &fund_amount);
@@ -831,9 +897,8 @@ fn prop_funded_amount_non_decreasing_across_multiple_funders() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let amt1: i128 = 50_000_000_000i128;
     let amt2: i128 = 100_000_000_000i128;
@@ -888,9 +953,8 @@ fn prop_funded_amount_equals_contribution_sum_for_funded_escrow() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let amounts: [i128; 3] = [50_000_000_000i128, 100_000_000_000i128, 50_000_000_000i128];
     let mut total_contributed: i128 = 0;
@@ -1240,9 +1304,8 @@ fn funded_and_settled_escrow<'a>(
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     for (investor, amount) in contributions {
         client.fund(investor, amount);
@@ -1771,9 +1834,8 @@ fn tiered_funded_and_settled_escrow<'a>(
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     for (investor, amount, lock_secs) in contributions {
         if *lock_secs == 0 {
@@ -2213,9 +2275,8 @@ fn slots_no_cap_is_none_after_multiple_funds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(
         client.get_remaining_investor_slots(),
@@ -2368,9 +2429,8 @@ fn slots_repeat_deposit_does_not_decrement_remaining() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let investor = Address::generate(&env);
 
@@ -2439,9 +2499,8 @@ fn slots_lower_cap_mid_sequence_invariant() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Fund 3 distinct investors.
     let inv1 = Address::generate(&env);
@@ -2522,9 +2581,8 @@ fn slots_fund_batch_conservation() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_slots_invariant(&client, "pre-batch");
 
@@ -2822,9 +2880,8 @@ fn slots_cap_exactly_hit_remaining_is_zero() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let investors: Vec<Address> = (0..cap as usize).map(|_| Address::generate(&env)).collect();
 

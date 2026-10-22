@@ -33,9 +33,8 @@ fn test_unique_funder_count_basic_functionality() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Verify initial state
     assert_eq!(client.get_unique_funder_count(), 0);
@@ -90,9 +89,8 @@ fn test_cap_enforcement_blocks_excess_investors() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Add two investors — reaches the investor cap but NOT the funding target.
     let inv1 = Address::generate(&env);
@@ -134,9 +132,8 @@ fn test_re_funding_same_address_doesnt_count_against_cap() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let investor = Address::generate(&env);
 
@@ -181,9 +178,8 @@ fn test_no_cap_allows_unlimited_investors() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_max_unique_investors_cap(), None);
 
@@ -225,9 +221,8 @@ fn test_max_per_investor_cap_blocks_excess_principal() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let inv1 = Address::generate(&env);
     client.fund(&inv1, &30_000_000_000i128);
@@ -264,9 +259,8 @@ fn test_init_zero_max_per_investor_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -297,9 +291,8 @@ fn test_min_contribution_floor_below_value_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &(floor - 1));
 }
@@ -332,9 +325,8 @@ fn test_min_contribution_floor_exact_value_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&inv, &floor);
     assert_eq!(client.get_contribution(&inv), floor);
@@ -370,12 +362,63 @@ fn test_min_contribution_floor_follow_on_below_value_rejected() {
         &None,
         &None,
         &None,
+        &None,
+        &None);
+
+    client.fund(&investor, &floor);
+    client.fund(&investor, &(floor - 1));
+}
+
+#[test]
+fn test_fund_batch_rejects_below_floor_entry_atomically() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let client = deploy(&env);
+    let admin = Address::generate(&env);
+    let sme = Address::generate(&env);
+    let floor = 500i128;
+    client.init(
+        &admin,
+        &String::from_str(&env, "BATCH_FLOOR"),
+        &sme,
+        &100_000_000_000i128,
+        &800i64,
+        &0u64,
+        &Address::generate(&env),
+        &None,
+        &Address::generate(&env),
+        &None,
+        &Some(floor),
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
+        &None,
         &None::<i64>,
         &None::<u32>,
     );
 
-    client.fund(&investor, &floor);
-    client.fund(&investor, &(floor - 1));
+    let valid_investor = Address::generate(&env);
+    let dust_investor = Address::generate(&env);
+    let entries = SorobanVec::from_array(
+        &env,
+        [
+            (valid_investor.clone(), 1_000i128),
+            (dust_investor.clone(), 1i128),
+        ],
+    );
+
+    assert_contract_error(
+        client.try_fund_batch(&entries),
+        crate::EscrowError::FundingBelowMinContribution,
+    );
+
+    assert_eq!(client.get_escrow().funded_amount, 0);
+    assert_eq!(client.get_contribution(&valid_investor), 0);
+    assert_eq!(client.get_contribution(&dust_investor), 0);
+    assert_eq!(client.get_unique_funder_count(), 0);
+    assert_eq!(client.get_investors(&0, &10).len(), 0);
 }
 
 #[test]
@@ -406,9 +449,8 @@ fn test_per_investor_cap_exact_cumulative_value_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&inv, &30_000_000_000i128);
     client.fund(&inv, &20_000_000_000i128);
@@ -445,9 +487,8 @@ fn test_per_investor_cap_one_over_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&inv, &30_000_000_000i128);
     client.fund(&inv, &20_000_000_001i128);
@@ -479,9 +520,8 @@ fn test_unique_investor_cap_exact_value_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.fund(&Address::generate(&env), &10_000_000_000i128);
@@ -516,9 +556,8 @@ fn test_unique_investor_cap_new_funder_one_over_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.fund(&Address::generate(&env), &10_000_000_000i128);
@@ -553,9 +592,8 @@ fn test_unique_investor_cap_existing_investor_follow_on_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&inv, &10_000_000_000i128);
     client.fund(&inv, &10_000_000_000i128);
@@ -590,9 +628,8 @@ fn test_init_min_contribution_not_positive_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -622,9 +659,8 @@ fn test_init_min_contribution_exceeds_amount_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     // A fund below the floor is rejected at fund time.
     let inv = Address::generate(&env);
     assert_contract_error(
@@ -660,9 +696,8 @@ fn test_init_zero_max_unique_investors_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -699,9 +734,8 @@ fn test_cap_with_fund_with_commitment() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_unique_funder_count(), 0);
 
@@ -748,9 +782,8 @@ fn test_lower_max_unique_investors_success() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let inv1 = Address::generate(&env);
     let inv2 = Address::generate(&env);
@@ -790,9 +823,8 @@ fn test_lower_cap_blocks_new_investors_at_lowered_limit() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &20_000_000_000i128);
     client.fund(&Address::generate(&env), &20_000_000_000i128);
@@ -827,9 +859,8 @@ fn test_lower_cap_existing_investors_may_refund() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let inv1 = Address::generate(&env);
     let inv2 = Address::generate(&env);
@@ -869,9 +900,8 @@ fn test_lower_cap_rejects_raise() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.lower_max_unique_investors(&4u32, &0u32);
 }
@@ -903,9 +933,8 @@ fn test_lower_cap_rejects_below_funder_count() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.fund(&Address::generate(&env), &10_000_000_000i128);
@@ -940,9 +969,8 @@ fn test_lower_cap_rejects_non_open_state() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &100_000_000_000i128);
     assert_eq!(client.get_escrow().status, 1);
@@ -976,9 +1004,8 @@ fn test_lower_cap_rejects_unlimited_escrow() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.lower_max_unique_investors(&10u32, &0u32);
 }
@@ -1009,9 +1036,8 @@ fn test_lower_cap_requires_admin_auth() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.lower_max_unique_investors(&3u32, &0u32);
     assert!(
@@ -1047,9 +1073,8 @@ fn test_lower_cap_unauthorized_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     env.mock_auths(&[]);
     client.lower_max_unique_investors(&3u32, &0u32);
@@ -1084,9 +1109,8 @@ fn test_lower_cap_emits_event() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.lower_max_unique_investors(&3u32, &0u32);
@@ -1129,8 +1153,7 @@ fn test_get_remaining_investor_slots() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
+
     );
     assert_eq!(client_no_cap.get_remaining_investor_slots(), None);
 
@@ -1153,8 +1176,7 @@ fn test_get_remaining_investor_slots() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
+
     );
 
     assert_eq!(client_cap.get_remaining_investor_slots(), Some(3));
@@ -1195,9 +1217,8 @@ fn test_get_remaining_investor_slots_post_lower_cap() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.fund(&Address::generate(&env), &10_000_000_000i128);
@@ -1239,9 +1260,8 @@ fn test_lower_min_contribution_floor_success() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_min_contribution_floor(), initial_floor);
 
@@ -1282,9 +1302,8 @@ fn test_lower_floor_enforces_new_floor() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Lower the floor
     client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
@@ -1330,9 +1349,8 @@ fn test_lower_floor_rejects_raise() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Attempt to raise the floor
     client.lower_min_contribution_floor(&20_000i128, &client.get_admin_nonce());
@@ -1365,9 +1383,8 @@ fn test_lower_floor_rejects_same_floor() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Attempt to set the same floor
     client.lower_min_contribution_floor(&10_000i128, &client.get_admin_nonce());
@@ -1400,9 +1417,8 @@ fn test_lower_floor_rejects_zero() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Non-positive floor must be rejected
     client.lower_min_contribution_floor(&0i128, &client.get_admin_nonce());
@@ -1435,9 +1451,8 @@ fn test_lower_floor_rejects_negative() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Negative floor must be rejected
     client.lower_min_contribution_floor(&-1i128, &client.get_admin_nonce());
@@ -1470,9 +1485,8 @@ fn test_lower_floor_rejects_non_open_state() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Fund to close the escrow
     client.fund(&Address::generate(&env), &100_000_000_000i128);
@@ -1508,9 +1522,8 @@ fn test_lower_floor_requires_admin_auth() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
     assert!(
@@ -1546,9 +1559,8 @@ fn test_lower_floor_unauthorized_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     env.mock_auths(&[]);
     client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
@@ -1584,9 +1596,8 @@ fn test_lower_floor_emits_event() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
 
@@ -1628,9 +1639,8 @@ fn test_lower_floor_twice_successive() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_min_contribution_floor(), 10_000i128);
     client.lower_min_contribution_floor(&7_000i128, &client.get_admin_nonce());
@@ -1667,9 +1677,8 @@ fn test_lower_floor_fund_at_old_floor_still_enforced() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Lower floor from 10,000 to 5,000
     client.lower_min_contribution_floor(&5_000i128, &client.get_admin_nonce());
@@ -1716,9 +1725,8 @@ fn test_lower_floor_unconfigured_succeeds_if_positive() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Floor defaults to 0
     assert_eq!(client.get_min_contribution_floor(), 0);
@@ -1757,9 +1765,8 @@ fn test_raise_accepted_and_allows_extra_investors() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // First two investors succeed
     let inv1 = Address::generate(&env);
@@ -1812,9 +1819,8 @@ fn test_raise_equal_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     // Attempt raise to same value -> should Err(NewCapNotHigher)
     client.raise_max_unique_investors(&3u32, &client.get_admin_nonce());
 }
@@ -1914,9 +1920,8 @@ fn test_raise_when_closed() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     // Fund two investors reaching target, status becomes funded (1)
     let inv1 = Address::generate(&env);
     let inv2 = Address::generate(&env);
@@ -1957,9 +1962,8 @@ fn test_lower_cap_at_funder_count_succeeds_zero_remaining_slots() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     let inv1 = Address::generate(&env);
     let inv2 = Address::generate(&env);
@@ -2011,9 +2015,8 @@ fn test_lower_cap_one_below_funder_count_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.fund(&Address::generate(&env), &10_000_000_000i128);
@@ -2054,9 +2057,8 @@ fn test_lower_max_unique_investors_raise_attempt_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Attempt to raise cap from 3 to 5 via the lower entrypoint — must panic.
     client.lower_max_unique_investors(&5u32, &client.get_admin_nonce());
@@ -2091,9 +2093,8 @@ fn test_lower_cap_floor_boundary_non_admin_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.fund(&Address::generate(&env), &10_000_000_000i128);
@@ -2131,9 +2132,8 @@ fn test_lower_cap_floor_boundary_admin_auth_recorded() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.fund(&Address::generate(&env), &10_000_000_000i128);
     client.fund(&Address::generate(&env), &10_000_000_000i128);
@@ -2178,9 +2178,8 @@ fn test_lower_cap_remaining_slots_consistent_after_each_lowering() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Fund 4 distinct investors.
     for _ in 0..4 {
@@ -2235,9 +2234,8 @@ fn test_raise_max_per_investor_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_max_per_investor_cap(), Some(50_000_000_000i128));
     let returned = client.raise_max_per_investor(&75_000_000_000i128, &client.get_admin_nonce());
@@ -2289,9 +2287,8 @@ fn test_raise_max_per_investor_not_raised_rejects_equal() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_contract_error(
         client.try_raise_max_per_investor(&50_000_000_000i128, &client.get_admin_nonce()),
@@ -2400,9 +2397,8 @@ fn test_raise_max_per_investor_emits_event() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     client.raise_max_per_investor(&75_000_000_000i128, &client.get_admin_nonce());
 
