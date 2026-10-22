@@ -49,14 +49,14 @@ version and reconcile against this document, using the
 
 ## Event Catalog
 
-The current contract defines 20 event structs.
+The current contract defines 22 event structs.
 
 | Rust event | `name` symbol | Entrypoint(s) |
 |---|---:|---|
 | `EscrowInitialized` | `escrow_ii` | `init` |
 | `MaxUniqueInvestorsCapLowered` | `inv_cap` | `lower_max_unique_investors` |
 | `EscrowFunded` | `funded` | `fund`, `fund_with_commitment` |
-| `FundingStateChanged` | `fund_chg` | `update_funding_target` |
+| `FundingStateChanged` | `fund_chg` | `update_funding_target`, `partial_settle` |
 | `EscrowSettled` | `escrow_sd` | `settle` |
 | `MaturityUpdatedEvent` | `maturity` | `update_maturity` |
 | `AdminAcceptedEvent` | `adm_acc` | `accept_admin` |
@@ -67,8 +67,11 @@ The current contract defines 20 event structs.
 | `CollateralRecordedEvt` | `coll_rec` | `record_sme_collateral_commitment` |
 | `SmeWithdrew` | `sme_wd` | `withdraw` |
 | `InvestorPayoutClaimed` | `inv_claim` | `claim_investor_payout` |
+| `FeeScheduleSubmitted` | `fee_sub` | `submit_fee_schedule` |
+| `FeeScheduleActivated` | `fee_act` | `activate_fee_schedule` |
 | `FundingCancelled` | `fund_can` | `cancel_funding` |
 | `InvestorRefundedEvt` | `refunded` | `refund` |
+| `EscrowUnfunded` | `unfund` | `unfund` |
 | `TreasuryDustSwept` | `dust_sw` | `sweep_terminal_dust` |
 | `PrimaryAttestationBound` | `att_bind` | `bind_primary_attestation_hash` |
 | `AttestationDigestAppended` | `att_app` | `append_attestation_digest` |
@@ -151,9 +154,10 @@ Data:
 
 Emitted exactly once when the escrow transitions from **open** (status 0) to **funded** (status 1).
 
-This event is emitted by `fund`, `fund_with_commitment`, `fund_batch`, `update_funding_target`, 
-or `partial_settle` — whichever call causes the `0 → 1` transition. Indexers should subscribe 
-to this event rather than buffering every `EscrowFunded` event to detect the funding-close edge.
+This event is emitted when `update_funding_target` or `partial_settle` causes the `0 → 1`
+transition. Funding deposits also emit it when they first cross the funding target. Indexers
+should subscribe to this event rather than buffering every `EscrowFunded` event to detect the
+funding-close edge.
 
 Topics:
 
@@ -375,6 +379,43 @@ Data:
 |---|---|
 | `payout` | `i128` |
 
+### `FeeScheduleSubmitted`
+
+Emitted after a new pending schedule is stored. An idempotent resubmission emits no event.
+
+Topics:
+
+| Index | Field | Type | Value |
+|---:|---|---|---|
+| 0 | fixed event topic | `Symbol` | `fee_schedule_submitted` |
+| 1 | `name` | `Symbol` | `fee_sub` |
+| 2 | `invoice_id` | `Symbol` | Escrow invoice id |
+
+Data:
+
+| Field | Type |
+|---|---|
+| `schedule` | `FeeSchedule` |
+
+### `FeeScheduleActivated`
+
+Emitted after a pending schedule is promoted to active at or after its activation ledger.
+
+Topics:
+
+| Index | Field | Type | Value |
+|---:|---|---|---|
+| 0 | fixed event topic | `Symbol` | `fee_schedule_activated` |
+| 1 | `name` | `Symbol` | `fee_act` |
+| 2 | `invoice_id` | `Symbol` | Escrow invoice id |
+
+Data:
+
+| Field | Type |
+|---|---|
+| `schedule` | `FeeSchedule` |
+| `previous` | `Option<FeeSchedule>` |
+
 ### `FundingCancelled`
 
 Emitted after successful `cancel_funding`.
@@ -411,6 +452,28 @@ Data:
 | Field | Type |
 |---|---|
 | `amount` | `i128` |
+
+### `EscrowUnfunded`
+
+Emitted after successful `unfund`.
+
+Topics:
+
+| Index | Field | Type | Value |
+|---:|---|---|---|
+| 0 | fixed event topic | `Symbol` | `escrow_unfunded` |
+| 1 | `name` | `Symbol` | `unfund` |
+| 2 | `investor` | `Address` | Investor withdrawing principal |
+| 3 | `invoice_id` | `Symbol` | Escrow invoice id |
+
+Data:
+
+| Field | Type |
+|---|---|
+| `amount` | `i128` |
+| `remaining_contribution` | `i128` |
+| `new_funded_amount` | `i128` |
+| `timestamp` | `u64` |
 
 ### `TreasuryDustSwept`
 
