@@ -234,7 +234,9 @@ fn dispute_resolved_then_release_succeeds() {
     let env = Env::default();
     let (client, admin, _) = funded_client(&env);
     client.open_dispute(&admin);
-    client.close_dispute(&admin, &true);
+    // `close_dispute` no longer takes a `resolved` flag: closing a dispute
+    // always resolves it.
+    client.close_dispute(&admin);
 
     let released = client.withdraw();
     assert_eq!(released.status, 3);
@@ -242,18 +244,20 @@ fn dispute_resolved_then_release_succeeds() {
 }
 
 #[test]
-fn rejected_dispute_resolution_is_explicit_and_non_mutating() {
+fn close_dispute_resolves_and_clears_active_flag() {
     let env = Env::default();
     let (client, admin, _) = funded_client(&env);
     client.open_dispute(&admin);
-    let before = client.get_dispute_record().unwrap();
-
-    let result = client.try_close_dispute(&admin, &false);
-    assert_contract_error(result, EscrowError::DisputeResolutionRejected);
-
     assert!(client.is_dispute_active());
-    assert_eq!(client.get_escrow().dispute_active, true);
-    assert_eq!(client.get_dispute_record().unwrap(), before);
+
+    client.close_dispute(&admin);
+
+    let record = client.get_dispute_record().unwrap();
+    assert_eq!(record.state, crate::DisputeState::Resolved);
+    assert!(record.resolved_at.is_some());
+    assert!(record.resolved_by.is_some());
+    assert!(!client.is_dispute_active());
+    assert!(!client.get_escrow().dispute_active);
 }
 
 #[test]
@@ -317,7 +321,7 @@ fn unauthorized_dispute_close_panics() {
     let env = Env::default();
     let (client, _, _) = funded_client(&env);
     let outsider = Address::generate(&env);
-    let err = client.try_close_dispute(&outsider, &true);
+    let err = client.try_close_dispute(&outsider);
     assert_contract_error(err, EscrowError::Unauthorized);
 }
 
