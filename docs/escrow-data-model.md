@@ -138,6 +138,7 @@ with three metadata families so callers obtain a complete view in a single host 
 ```rust
 pub struct EscrowSummary {
     pub escrow: InvoiceEscrow,
+    pub status_classification: EscrowStatus,
     pub has_maturity_lock: bool,
     pub legal_hold: bool,
     pub funding_close_snapshot: EscrowCloseSnapshot,
@@ -152,6 +153,9 @@ pub struct EscrowSummary {
 }
 ```
 
+- `status_classification` — maps status codes `0..=4` to `Open`, `Funded`, `Settled`,
+  `Withdrawn`, and `Cancelled`; any other code returns `Unknown(code)` without losing the
+  original discriminant.
 - `sme_collateral_commitment` — pulled from `DataKey::SmeCollateralPledge`; `None` when never recorded.
 - `has_primary_attestation` — `true` when `DataKey::PrimaryAttestationHash` is present.
 - `attestation_log_length` — length of the `Vec` stored at `DataKey::AttestationAppendLog`; `0` when absent.

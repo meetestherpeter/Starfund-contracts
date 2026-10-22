@@ -28,9 +28,8 @@ fn test_init_stores_escrow() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(escrow.invoice_id, symbol_short!("INV001"));
     assert_eq!(escrow.admin, admin);
     assert_eq!(escrow.sme_address, sme);
@@ -201,9 +200,8 @@ fn test_init_stores_keyed_invoice_and_lists_it() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let got = client.get_escrow();
     assert_eq!(got, escrow);
 }
@@ -230,9 +228,8 @@ fn test_init_requires_admin_auth() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert!(
         env.auths().iter().any(|(addr, _)| *addr == admin),
         "admin auth was not recorded for init"
@@ -489,9 +486,8 @@ fn test_cost_baseline_init() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -516,9 +512,8 @@ fn test_cost_baseline_init_zero_maturity() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -543,9 +538,8 @@ fn test_cost_baseline_init_max_amount() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 /// Verify that an invoice amount one above [`crate::MAX_INVOICE_AMOUNT`] is
@@ -638,9 +632,8 @@ fn test_max_bound_funded_escrow_compute_investor_payout_no_overflow() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     // Fund with a single investor contributing the full amount.
     let investor = Address::generate(&env);
@@ -691,9 +684,8 @@ fn test_init_invoice_id_empty_string_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -723,9 +715,8 @@ fn test_init_invoice_id_whitespace_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -756,9 +747,8 @@ fn test_init_invoice_id_too_long_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -788,9 +778,8 @@ fn test_init_invoice_id_bad_charset_hyphen_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -820,9 +809,8 @@ fn test_init_invoice_id_non_ascii_multibyte_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -857,9 +845,8 @@ fn test_init_invoice_id_embedded_null_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 #[test]
@@ -890,9 +877,8 @@ fn test_init_stores_registry_some_and_getters() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_registry_ref(), Some(reg));
     assert_eq!(client.get_funding_token(), token);
     assert_eq!(client.get_treasury(), treasury);
@@ -927,9 +913,8 @@ fn test_init_min_contribution_floor_stored() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_min_contribution_floor(), 1_000i128);
 }
 
@@ -960,9 +945,8 @@ fn test_init_min_contribution_floor_defaults_to_zero() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_min_contribution_floor(), 0i128);
 }
 
@@ -1065,9 +1049,8 @@ fn test_init_min_contribution_equal_to_amount_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_min_contribution_floor(), 5_000i128);
 }
 
@@ -1111,9 +1094,8 @@ fn test_get_funding_token_after_init_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_funding_token(), token);
 }
 
@@ -1140,9 +1122,8 @@ fn test_get_treasury_after_init_succeeds() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_treasury(), treasury);
 }
 
@@ -1180,9 +1161,8 @@ fn test_init_registry_none_roundtrip() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_registry_ref(), None);
 }
 
@@ -1218,9 +1198,8 @@ fn test_init_escrow_initialized_event_includes_bound_refs() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(
         env.events().all(),
@@ -1267,9 +1246,8 @@ fn test_init_escrow_initialized_event_registry_none() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(
         env.events().all(),
@@ -1367,9 +1345,8 @@ fn test_invoice_id_length_33_panics() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 }
 
 // --- charset: valid characters ---
@@ -1579,9 +1556,8 @@ fn datakey_distributed_principal_starts_at_zero_and_increments_on_refund() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
 
     assert_eq!(client.get_distributed_principal(), 0i128);
 
@@ -1620,9 +1596,8 @@ fn test_init_maturity_zero_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_escrow().maturity, 0);
 }
 
@@ -1650,9 +1625,8 @@ fn test_init_maturity_within_horizon_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_escrow().maturity, 2000);
 }
 
@@ -1682,9 +1656,8 @@ fn test_init_maturity_at_horizon_boundary_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_escrow().maturity, at_boundary);
 }
 
@@ -1777,9 +1750,8 @@ fn test_init_with_custom_horizon_used() {
         &Some(short_horizon),
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_eq!(client.get_maturity_max_horizon(), short_horizon);
     assert_eq!(client.get_escrow().maturity, 3000);
 }
@@ -1810,9 +1782,8 @@ fn test_update_maturity_zero_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let updated = client.update_maturity(&0u64, &0u32);
     assert_eq!(updated.maturity, 0);
 }
@@ -1841,9 +1812,8 @@ fn test_update_maturity_within_horizon_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let updated = client.update_maturity(&2000u64, &0u32);
     assert_eq!(updated.maturity, 2000);
 }
@@ -1873,9 +1843,8 @@ fn test_update_maturity_at_horizon_boundary_accepted() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     let at_boundary = now + DEFAULT_MATURITY_MAX_HORIZON_SECS;
     let updated = client.update_maturity(&at_boundary, &0u32);
     assert_eq!(updated.maturity, at_boundary);
@@ -1905,9 +1874,8 @@ fn test_update_maturity_beyond_horizon_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_contract_error(
         client.try_update_maturity(&(1000u64 + DEFAULT_MATURITY_MAX_HORIZON_SECS + 1), &0u32),
         EscrowError::MaturityExceedsMaxHorizon,
@@ -1938,9 +1906,8 @@ fn test_update_maturity_in_past_rejected() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     assert_contract_error(
         client.try_update_maturity(&1000u64, &0u32),
         EscrowError::MaturityInPast,
@@ -1973,9 +1940,8 @@ fn test_update_maturity_max_horizon_by_admin() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     // Default horizon is DEFAULT_MATURITY_MAX_HORIZON_SECS
     assert_eq!(
         client.get_maturity_max_horizon(),
@@ -2014,9 +1980,8 @@ fn test_update_maturity_honors_reduced_horizon() {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client.update_maturity_max_horizon(&3600u64, &0u32); // 1 hour
     client.update_maturity(&(1000u64 + 7200u64), &1u32); // 2 hours — exceeds new 1h horizon
 }

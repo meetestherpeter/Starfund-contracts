@@ -3,7 +3,11 @@ use super::{
     StarfundEscrowClient,
 };
 use soroban_sdk::Vec as SorobanVec;
-use soroban_sdk::{symbol_short, testutils::Address as _, Address, Env, Error, Event, InvokeError};
+use soroban_sdk::{
+    symbol_short,
+    testutils::{Address as _, Events as _},
+    Address, Env, Error, Event, InvokeError,
+};
 use std::fmt::Debug;
 
 fn deploy(env: &Env) -> StarfundEscrowClient<'_> {
@@ -34,9 +38,8 @@ fn init(env: &Env, client: &StarfundEscrowClient) -> (Address, Address) {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     (admin, sme)
 }
 
@@ -530,9 +533,8 @@ fn init_gate(env: &Env, client: &StarfundEscrowClient) -> (Address, Address) {
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     (admin, sme)
 }
 
@@ -564,7 +566,7 @@ fn gate_fund_allowlist_active_investor_absent_returns_typed_error() {
     init_gate(&env, &client);
 
     let investor = Address::generate(&env);
-    client.set_allowlist_active(&true);
+    client.set_allowlist_active(&true, &0u32);
     // No call to set_investor_allowlisted — entry is absent → default-to-deny.
 
     assert_contract_error_gate(
@@ -634,7 +636,7 @@ fn gate_fwc_allowlist_active_investor_absent_returns_typed_error() {
     init_gate(&env, &client);
 
     let investor = Address::generate(&env);
-    client.set_allowlist_active(&true);
+    client.set_allowlist_active(&true, &0u32);
 
     assert_contract_error_gate(
         client.try_fund_with_commitment(&investor, &1_000i128, &0u64),
@@ -704,7 +706,7 @@ fn gate_disable_mid_funding_unblocks_any_investor() {
     );
 
     // Disable gate — investor should now succeed without an entry.
-    client.set_allowlist_active(&false);
+    client.set_allowlist_active(&false, &0u32);
     let escrow = client.fund(&investor, &500i128);
     assert_eq!(escrow.funded_amount, 500i128);
 }
@@ -724,7 +726,7 @@ fn gate_reenable_after_disable_blocks_unenrolled_investor() {
     assert_eq!(escrow.funded_amount, 1_000i128);
 
     // Enable gate without allowlisting this investor.
-    client.set_allowlist_active(&true);
+    client.set_allowlist_active(&true, &0u32);
 
     // Second deposit blocked — prior contribution does not exempt the investor.
     assert_contract_error_gate(
@@ -1103,7 +1105,7 @@ fn test_batch_produces_same_per_investor_events_as_individual_calls() {
     let single_b_events = env.events().all();
 
     // Batch-revoke both.
-    client.set_investors_allowlisted(&batch, &false);
+    client.set_investors_allowlisted(&batch, &false, &0u32);
 
     // Both are now blocked.
     assert_contract_error_gate(
@@ -1358,7 +1360,7 @@ fn allowlist_capacity_limit_1_blocks_second_investor() {
     assert!(client.is_investor_allowlisted(&a));
 
     assert_contract_error_gate(
-        client.try_set_investor_allowlisted(&b, &true),
+        client.try_set_investor_allowlisted(&b, &true, &0u32),
         EscrowError::AllowlistCapacityReached,
     );
     assert!(!client.is_investor_allowlisted(&b));
@@ -1383,7 +1385,7 @@ fn allowlist_capacity_at_exact_limit_blocks_next_addition() {
 
     let extra = Address::generate(&env);
     assert_contract_error_gate(
-        client.try_set_investor_allowlisted(&extra, &true),
+        client.try_set_investor_allowlisted(&extra, &true, &0u32),
         EscrowError::AllowlistCapacityReached,
     );
 }
@@ -1424,7 +1426,7 @@ fn allowlist_removal_frees_slot_for_new_entry() {
 
     // Adding b fails — at capacity.
     assert_contract_error_gate(
-        client.try_set_investor_allowlisted(&b, &true),
+        client.try_set_investor_allowlisted(&b, &true, &0u32),
         EscrowError::AllowlistCapacityReached,
     );
 
@@ -1463,7 +1465,7 @@ fn allowlist_batch_rejected_when_exceeds_limit() {
     batch.push_back(new_b.clone());
 
     assert_contract_error_gate(
-        client.try_set_investors_allowlisted(&batch, &true),
+        client.try_set_investors_allowlisted(&batch, &true, &0u32),
         EscrowError::AllowlistCapacityReached,
     );
 }
@@ -1485,7 +1487,7 @@ fn allowlist_batch_exactly_filling_limit_succeeds() {
     }
 
     // Exactly at limit — should succeed.
-    client.set_investors_allowlisted(&batch, &true);
+    client.set_investors_allowlisted(&batch, &true, &0u32);
     assert_eq!(client.get_allowlist_limit(), limit);
 }
 
@@ -1509,17 +1511,17 @@ fn allowlist_batch_revoke_frees_slots() {
     batch_ab.push_back(b.clone());
 
     // Fill to limit.
-    client.set_investors_allowlisted(&batch_ab, &true);
+    client.set_investors_allowlisted(&batch_ab, &true, &0u32);
 
     // Revoke a — frees a slot.
     let mut batch_a: SorobanVec<Address> = SorobanVec::new(&env);
     batch_a.push_back(a.clone());
-    client.set_investors_allowlisted(&batch_a, &false);
+    client.set_investors_allowlisted(&batch_a, &false, &0u32);
 
     // c can now be added.
     let mut batch_c: SorobanVec<Address> = SorobanVec::new(&env);
     batch_c.push_back(c.clone());
-    client.set_investors_allowlisted(&batch_c, &true);
+    client.set_investors_allowlisted(&batch_c, &true, &0u32);
 
     assert!(!client.is_investor_allowlisted(&a));
     assert!(client.is_investor_allowlisted(&b));
@@ -1560,7 +1562,7 @@ fn allowlist_lowering_limit_does_not_evict_but_blocks_new_additions() {
 
     // New addition is blocked (3 entries >= new limit of 1).
     assert_contract_error_gate(
-        client.try_set_investor_allowlisted(&d, &true),
+        client.try_set_investor_allowlisted(&d, &true, &0u32),
         EscrowError::AllowlistCapacityReached,
     );
     let investor = Address::generate(&env);
@@ -1884,7 +1886,7 @@ fn batch_allowlist_exact_max_batch_size_succeeds() {
     }
 
     // Exactly MAX must succeed.
-    client.set_investors_allowlisted(&v, &true);
+    client.set_investors_allowlisted(&v, &true, &0u32);
     assert_eq!(
         client.get_allowlisted_investors_count(),
         super::MAX_INVESTOR_ALLOWLIST_BATCH,
@@ -1907,7 +1909,7 @@ fn batch_allowlist_one_over_max_batch_returns_typed_error() {
     }
 
     assert_contract_error_gate(
-        client.try_set_investors_allowlisted(&v, &true),
+        client.try_set_investors_allowlisted(&v, &true, &0u32),
         EscrowError::InvestorBatchTooLarge,
     );
     // Count must remain 0 — no partial writes.
@@ -1925,7 +1927,7 @@ fn batch_allowlist_empty_batch_returns_typed_error() {
     let v: soroban_sdk::Vec<Address> = soroban_sdk::Vec::new(&env);
 
     assert_contract_error_gate(
-        client.try_set_investors_allowlisted(&v, &true),
+        client.try_set_investors_allowlisted(&v, &true, &0u32),
         EscrowError::InvestorBatchEmpty,
     );
 }
@@ -1944,13 +1946,13 @@ fn batch_revoke_max_entries_count_reaches_zero() {
         v.push_back(Address::generate(&env));
     }
 
-    client.set_investors_allowlisted(&v, &true);
+    client.set_investors_allowlisted(&v, &true, &0u32);
     assert_eq!(
         client.get_allowlisted_investors_count(),
         super::MAX_INVESTOR_ALLOWLIST_BATCH
     );
 
-    client.set_investors_allowlisted(&v, &false);
+    client.set_investors_allowlisted(&v, &false, &0u32);
     assert_eq!(
         client.get_allowlisted_investors_count(),
         0,
@@ -1971,7 +1973,7 @@ fn pagination_full_scan_no_overflow_or_duplicates() {
     init(&env, &client);
 
     let n: usize = 13;
-    let mut inserted = std::collections::HashSet::new();
+    let mut inserted: Vec<String> = Vec::new();
     for _ in 0..n {
         let addr = Address::generate(&env);
         inserted.insert(addr.to_string());
@@ -1980,7 +1982,7 @@ fn pagination_full_scan_no_overflow_or_duplicates() {
 
     // Paginate with page size 5 → 3 pages (5, 5, 3).
     let page_size: u32 = 5;
-    let mut collected = std::collections::HashSet::new();
+    let mut collected: Vec<String> = Vec::new();
     let mut start: u32 = 0;
     loop {
         let page = client.get_allowlisted_investors(&start, &page_size);
@@ -1991,9 +1993,10 @@ fn pagination_full_scan_no_overflow_or_duplicates() {
         for i in 0..page_len {
             let addr_str = page.get(i).unwrap().to_string().to_string();
             assert!(
-                collected.insert(addr_str.clone()),
+                !collected.iter().any(|s| s == &addr_str),
                 "duplicate address {addr_str} found in paginated results"
             );
+            collected.push(addr_str);
         }
         start = start.saturating_add(page_size);
         if page_len < page_size {
@@ -2001,10 +2004,13 @@ fn pagination_full_scan_no_overflow_or_duplicates() {
         }
     }
     assert_eq!(collected.len(), n, "total paginated count must equal {n}");
-    assert_eq!(
-        collected, inserted,
-        "paginated set must match exactly the inserted set"
-    );
+    assert_eq!(collected.len(), inserted.len());
+    for addr_str in &collected {
+        assert!(
+            inserted.iter().any(|s| s == addr_str),
+            "unexpected paginated address {addr_str}"
+        );
+    }
 }
 
 /// After adding 5 investors, querying `start = 3` with `limit = u32::MAX`
