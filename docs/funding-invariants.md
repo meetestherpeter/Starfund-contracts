@@ -219,7 +219,9 @@ if FundingDeadline is Some(d): env.ledger().timestamp() <= d
 **Related entrypoints:**
 - `extend_funding_deadline` — admin-only; strictly extends an existing deadline; only valid
   in status 0; new deadline must be < maturity when maturity is set
-  (`EscrowError::FundingDeadlineAtOrAfterMaturity` = 218)
+  (`EscrowError::FundingDeadlineAtOrAfterMaturity` = 218). `update_maturity` also requires
+  maturity to be at least `MIN_MATURITY_AFTER_FUNDING_DEADLINE_SECS` (30 days) after the
+  configured deadline (`EscrowError::MaturityTooCloseToFundingDeadline` = 261).
 
 ---
 

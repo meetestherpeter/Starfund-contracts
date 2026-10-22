@@ -328,7 +328,7 @@ has changed. **This event carries no settlement authority** — it exists purely
 indexers can re-sync their local pointer without polling the contract.
 
 **Topics:**
-1. `reg_rebind` (Symbol)
+1. `reg_rebd` (Symbol)
 2. `invoice_id` (Symbol)
 
 **Data Payload:**
@@ -348,7 +348,7 @@ to verify on-chain state.
 **Example (JSON Decoded):**
 ```json
 {
-  "topics": ["reg_rebind", "INV_001"],
+  "topics": ["reg_rebd", "INV_001"],
   "data": {
     "registry": "CREG..."
   }

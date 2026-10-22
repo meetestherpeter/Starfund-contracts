@@ -44,9 +44,8 @@ fn init_with_tiers<'a>(
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
-    );
+        &None,
+        &None);
     client
 }
 
@@ -76,8 +75,7 @@ fn assert_init_error(
         &None,
         &None,
         &None,
-        &None::<i64>,
-        &None::<u32>,
+
     );
     assert_contract_error(result, expected);
 }

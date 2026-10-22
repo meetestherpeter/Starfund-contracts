@@ -8,6 +8,12 @@
 //! build a [`DataKey`] inline — reducing the risk of typos, discriminant drift between
 //! modules, and copy-paste errors when a new key needs to be added.
 //!
+//! ## Coverage
+//!
+//! Every variant of [`DataKey`] has a corresponding constructor function in this module.
+//! Call sites should resolve keys through these helpers rather than constructing
+//! `DataKey::Variant` literals inline.
+//!
 //! ## Collateral keys
 //!
 //! The collateral pledge key family is managed by [`collateral_pledge_key`]. The
@@ -23,10 +29,6 @@
 //! `.unwrap_or(default)` and its absence does not change existing entrypoint semantics.
 //! Renaming a variant, changing its XDR discriminant, or altering the stored type of an
 //! existing key is **breaking** and requires a `migrate` path or a full redeploy.
-
-// Key-builder helpers are part of the crate's public API for symmetry. Call sites
-// currently use `DataKey::Variant` literals inline; the helpers are kept so the
-// indirection layer remains available without churn if/when callers migrate.
 
 use crate::DataKey;
 use soroban_sdk::Address;

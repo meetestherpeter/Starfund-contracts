@@ -56,7 +56,7 @@ The current contract defines 22 event structs.
 | `EscrowInitialized` | `escrow_ii` | `init` |
 | `MaxUniqueInvestorsCapLowered` | `inv_cap` | `lower_max_unique_investors` |
 | `EscrowFunded` | `funded` | `fund`, `fund_with_commitment` |
-| `FundingStateChanged` | `fund_chg` | `update_funding_target` |
+| `FundingStateChanged` | `fund_chg` | `update_funding_target`, `partial_settle` |
 | `EscrowSettled` | `escrow_sd` | `settle` |
 | `MaturityUpdatedEvent` | `maturity` | `update_maturity` |
 | `AdminAcceptedEvent` | `adm_acc` | `accept_admin` |
@@ -155,9 +155,10 @@ Data:
 
 Emitted exactly once when the escrow transitions from **open** (status 0) to **funded** (status 1).
 
-This event is emitted by `fund`, `fund_with_commitment`, `fund_batch`, `update_funding_target`, 
-or `partial_settle` — whichever call causes the `0 → 1` transition. Indexers should subscribe 
-to this event rather than buffering every `EscrowFunded` event to detect the funding-close edge.
+This event is emitted when `update_funding_target` or `partial_settle` causes the `0 → 1`
+transition. Funding deposits also emit it when they first cross the funding target. Indexers
+should subscribe to this event rather than buffering every `EscrowFunded` event to detect the
+funding-close edge.
 
 Topics:
 
